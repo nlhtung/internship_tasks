@@ -1,0 +1,7 @@
+sources:
+  - name: raw
+    schema: first_schema
+    tables:
+      - name: customers
+      - name: currency_rates
+      - name: orders

@@ -64,6 +64,7 @@ services:
    volumes:
      - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
      - ./app/write_iceberg.py:/opt/app/write_iceberg.py:ro
+     - ./app/time_travel.py:/opt/app/time_travel.py:ro
      - ./libs/hadoop-aws-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-aws-3.3.1.jar:ro
      - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.11.1026.jar:ro
      - ./libs/hadoop-client-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-client-3.3.1.jar:ro
@@ -83,6 +84,7 @@ services:
    volumes:
      - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
      - ./app/write_iceberg.py:/opt/app/write_iceberg.py:ro
+     - ./app/time_travel.py:/opt/app/time_travel.py:ro
      - ./libs/hadoop-aws-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-aws-3.3.1.jar:ro
      - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.11.1026.jar:ro
      - ./libs/hadoop-client-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-client-3.3.1.jar:ro

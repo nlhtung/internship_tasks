@@ -1,95 +1,134 @@
 services:
- hive-postgres:
-   image: postgres:15
-   container_name: hive-postgres
-   environment:
-     POSTGRES_USER:     hive
-     POSTGRES_PASSWORD: hivepw
-     POSTGRES_DB:       hive
-   ports:
-     - "5433:5432"
-   volumes:
-     - hive_postgres_data:/var/lib/postgresql/data
-   healthcheck:
-     test: ["CMD-SHELL","pg_isready -U hive -d hive"]
-     interval: 10s
-     retries: 5
- 
- hive-metastore:
-   image: apache/hive:4.0.0-beta-1
-   container_name: hive-metastore
-   depends_on:
-     hive-postgres:
-       condition: service_healthy
-   ports:
-     - "9083:9083"
-   volumes:
-     - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
-     - ./libs/postgresql-42.7.7.jar:/opt/hive/lib/postgresql-42.7.7.jar:ro
-     - ./libs/hadoop-aws-3.3.1.jar:/opt/hive/lib/hadoop-aws-3.3.1.jar:ro
-     - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/hive/lib/aws-java-sdk-bundle-1.11.1026.jar:ro
-     - ./libs/hadoop-client-3.3.1.jar:/opt/hive/lib/hadoop-client-3.3.1.jar:ro
-   entrypoint: >
-     bash -c "schematool -dbType postgres -initOrUpgradeSchema &&
-              hive --service metastore"
- 
- minio:
-   image: minio/minio:latest
-   container_name: minio
-   command: server /data --console-address ":9001"
-   environment:
-     MINIO_ACCESS_KEY: minioadmin
-     MINIO_SECRET_KEY: minioadmin
-   ports:
-     - "9000:9000"
-     - "9001:9001"
-   volumes:
-     - minio_data:/data
- 
- spark-master:
-   build: .
-   container_name: spark-master
-   depends_on:
-     - hive-metastore
-     - minio
-   environment:
-     SPARK_MODE:               master
-     SPARK_MASTER_HOST:        spark-master
-     SPARK_MASTER_PORT:        7077
-     SPARK_MASTER_WEBUI_PORT:  8080
-     SPARK_LOG_LEVEL:          WARN
-   ports:
-     - "7077:7077"
-     - "8080:8080"
-   volumes:
-     - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
-     - ./app/write_iceberg.py:/opt/app/write_iceberg.py:ro
-     - ./app/time_travel.py:/opt/app/time_travel.py:ro
-     - ./libs/hadoop-aws-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-aws-3.3.1.jar:ro
-     - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.11.1026.jar:ro
-     - ./libs/hadoop-client-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-client-3.3.1.jar:ro
-     - ./libs/iceberg-spark-runtime-3.5_2.12-1.9.2.jar:/opt/bitnami/spark/jars/iceberg-spark-runtime-3.5_2.12-1.9.2.jar
- spark-worker:
-   build: .
-   container_name: spark-worker
-   depends_on:
-     - spark-master
-   environment:
-     SPARK_MODE:              worker
-     SPARK_MASTER_URL:        spark://spark-master:7077
-     SPARK_WORKER_WEBUI_PORT: 8081
-     SPARK_LOG_LEVEL:         WARN
-   ports:
-     - "8081:8081"
-   volumes:
-     - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
-     - ./app/write_iceberg.py:/opt/app/write_iceberg.py:ro
-     - ./app/time_travel.py:/opt/app/time_travel.py:ro
-     - ./libs/hadoop-aws-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-aws-3.3.1.jar:ro
-     - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.11.1026.jar:ro
-     - ./libs/hadoop-client-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-client-3.3.1.jar:ro
-     - ./libs/iceberg-spark-runtime-3.5_2.12-1.9.2.jar:/opt/bitnami/spark/jars/iceberg-spark-runtime-3.5_2.12-1.9.2.jar
+  hive-postgres:
+    image: postgres:15
+    container_name: hive-postgres
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hivepw
+      POSTGRES_DB: hive
+    ports:
+      - "5433:5432"
+    volumes:
+      - hive_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U hive -d hive"]
+      interval: 10s
+      retries: 5
+
+  hive-metastore:
+    image: apache/hive:4.0.0-beta-1
+    container_name: hive-metastore
+    depends_on:
+      hive-postgres:
+        condition: service_healthy
+    ports:
+      - "9083:9083"
+    volumes:
+      - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml   # Cấu hình Hive
+      - ./libs/postgresql-42.7.7.jar:/opt/hive/lib/postgresql-42.7.7.jar
+      - ./libs/hadoop-aws-3.3.1.jar:/opt/hive/lib/hadoop-aws-3.3.1.jar
+      - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/hive/lib/aws-java-sdk-bundle-1.11.1026.jar
+      - ./libs/hadoop-client-3.3.1.jar:/opt/hive/lib/hadoop-client-3.3.1.jar
+    entrypoint: >
+      bash -c "schematool -dbType postgres -initOrUpgradeSchema &&
+               hive --service metastore"
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  spark-master:
+    image: bitnami/spark:3.4.1   # Đổi từ build thành image đã có sẵn
+    container_name: spark-master
+    depends_on:
+      - hive-metastore
+      - minio
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+      SPARK_LOG_LEVEL: WARN
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    volumes:
+      - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf   # Cấu hình Spark
+      - ./app/:/opt/app/  # Lưu lại các tệp ứng dụng trong container
+      - ./libs/hadoop-aws-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-aws-3.3.1.jar
+      - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.11.1026.jar
+      - ./libs/hadoop-client-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-client-3.3.1.jar
+      - ./libs/iceberg-spark-runtime-3.5_2.12-1.9.2.jar:/opt/bitnami/spark/jars/iceberg-spark-runtime-3.5_2.12-1.9.2.jar
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/work/data
+
+  spark-worker:
+    image: bitnami/spark:3.4.1   # Đổi từ build thành image đã có sẵn
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_LOG_LEVEL: WARN
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf   # Cấu hình Spark
+      - ./app/:/opt/app/  # Giữ lại các tệp ứng dụng trong container
+      - ./libs/hadoop-aws-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-aws-3.3.1.jar
+      - ./libs/aws-java-sdk-bundle-1.11.1026.jar:/opt/bitnami/spark/jars/aws-java-sdk-bundle-1.11.1026.jar
+      - ./libs/hadoop-client-3.3.1.jar:/opt/bitnami/spark/jars/hadoop-client-3.3.1.jar
+      - ./libs/iceberg-spark-runtime-3.5_2.12-1.9.2.jar:/opt/bitnami/spark/jars/iceberg-spark-runtime-3.5_2.12-1.9.2.jar
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/work/data
+
+  spark-thrift-server:
+    image: bitnami/spark:3.4.1   # Đổi từ build thành image đã có sẵn
+    container_name: spark-thrift-server
+    environment:
+      - SPARK_CONF_DIR=/opt/bitnami/spark/conf
+    command: >
+      /bin/bash -c "
+      /opt/bitnami/spark/sbin/start-thriftserver.sh --master spark://spark-master:7077 --conf hive.server2.thrift.port=10000
+      && sleep infinity"
+    ports:
+      - "10000:10000"
+      - "4041:4040"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/work/data
+    depends_on:
+      - spark-master
+
+  jupyter:
+    build: ./jupyter
+    container_name: jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/work/data
+    depends_on:
+      - spark-master
+      - spark-worker
+    environment:
+      - PYSPARK_PYTHON=python3
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    command: ["start-notebook.sh", "--NotebookApp.token=''"]
+
+
 volumes:
- hive_postgres_data:
- minio_data:
- iceberg_data:
+  hive_postgres_data:
+  minio_data:
+  iceberg_data:
